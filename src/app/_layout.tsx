@@ -1,16 +1,39 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import React from 'react';
-import { useColorScheme } from 'react-native';
+import "../global.css";
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { useAuth } from "@clerk/clerk-expo";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { AppProviders } from "@/providers";
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+function RootLayoutNav() {
+  const { isSignedIn } = useAuth();
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+        >
+        {/* Auth screens - only accessible when NOT signed in */}
+        <Stack.Protected guard={!isSignedIn}>
+            <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+
+        {/* App screens - only accessible when signed in */}
+        <Stack.Protected guard={!!isSignedIn}>
+          <Stack.Screen name="(app)" />
+        </Stack.Protected>
+      </Stack>
+      <StatusBar style="auto" />
+    </>
   );
+}
+
+export default function RootLayout() {
+  return(
+    <AppProviders>
+      <RootLayoutNav />
+    </AppProviders>
+  )
 }
