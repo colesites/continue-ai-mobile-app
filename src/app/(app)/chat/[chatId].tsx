@@ -9,7 +9,7 @@ import { useChatScreen } from "@/features/chat/use-chat-screen";
 
 export default function ChatScreen() {
   const router = useRouter();
-  const { chat, isSending, onSend } = useChatScreen();
+  const { chat, messages, isSending, onSend, draft, setDraft } = useChatScreen();
 
   if (!chat) {
     return (
@@ -29,6 +29,13 @@ export default function ChatScreen() {
     );
   }
 
+  // Map AI SDK messages to ChatMessage format if needed (mainly for createdAt)
+  const formattedMessages = messages.map((m) => ({
+    ...m,
+    createdAt: m.createdAt ? m.createdAt.getTime() : Date.now(),
+    role: m.role as any,
+  }));
+
   return (
     <ScreenBackground>
       <MainHeader />
@@ -39,10 +46,12 @@ export default function ChatScreen() {
       </View>
 
       <View className="flex-1">
-        <ChatList messages={chat.messages} isStreaming={isSending} />
+        <ChatList messages={formattedMessages} isStreaming={isSending} />
       </View>
 
       <PromptInput
+        value={draft}
+        onChangeValue={setDraft}
         onSend={() => void onSend()}
         disabled={isSending}
         placeholder="Continue the conversation..."
