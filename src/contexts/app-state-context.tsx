@@ -184,43 +184,21 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     [chats],
   );
 
-  const appendMessage = useCallback(
-    (chatId: string, message: ChatMessage) => {
-      updateChat(chatId, (chat) => {
-        const title =
-          chat.title === "New Conversation" && message.role === "user" ? message.content.slice(0, 60) : chat.title;
+  const appendMessage = useCallback((chatId: string, message: ChatMessage) => {
+    updateChat(chatId, (chat) => {
+      const title =
+        chat.title === "New Conversation" && message.role === "user"
+          ? message.content.slice(0, 60)
+          : chat.title;
 
-        return {
-          ...chat,
-          title,
-          updatedAt: message.createdAt,
-          messages: [...chat.messages, message],
-        };
-      });
-    },
-    [updateChat],
-  );
-
-  const updateLastAssistantMessage = useCallback(
-    (chatId: string, content: string) => {
-      updateChat(chatId, (chat) => {
-        const lastMessage = chat.messages[chat.messages.length - 1];
-        if (lastMessage?.role !== "assistant") return chat;
-
-        const newMessages = [...chat.messages];
-        newMessages[newMessages.length - 1] = {
-          ...lastMessage,
-          content,
-        };
-
-        return {
-          ...chat,
-          messages: newMessages,
-        };
-      });
-    },
-    [updateChat],
-  );
+      return {
+        ...chat,
+        title,
+        updatedAt: message.createdAt,
+        messages: [...chat.messages, message],
+      };
+    });
+  }, [updateChat]);
 
   const sendMessage = useCallback(
     async ({ chatId, prompt, modelId, webSearchEnabled, imageAspectRatio, imageSize }: SendMessageOptions) => {
@@ -242,56 +220,40 @@ export function AppStateProvider({ children }: PropsWithChildren) {
 
       appendMessage(chatId, userMessage);
 
-      // Create initial assistant message for streaming
-      const assistantMessageId = createId("msg");
-      const assistantMessage: ChatMessage = {
-        id: assistantMessageId,
-        role: "assistant",
-        content: "",
-        createdAt: Date.now(),
-        modelId,
-      };
-      appendMessage(chatId, assistantMessage);
-
       try {
         const latestChat = getChat(chatId);
         const messagesForApi = latestChat ? [...latestChat.messages, userMessage] : [userMessage];
 
-        let accumulatedReply = "";
-        const backendReply = await requestAssistantReply(
-          {
-            model: modelId,
-            webSearchEnabled,
-            imageAspectRatio,
-            imageSize,
-            messages: messagesForApi,
-          },
-          (chunk) => {
-            accumulatedReply += chunk;
-            updateLastAssistantMessage(chatId, accumulatedReply);
-          },
-        );
+        const backendReply = await requestAssistantReply({
+          model: modelId,
+          webSearchEnabled,
+          imageAspectRatio,
+          imageSize,
+          messages: messagesForApi,
+        });
 
-        if (!accumulatedReply && !backendReply) {
-          const fallback = buildFallbackReply({
-            prompt: trimmed,
-            modelId,
-            webSearchEnabled,
-            imageAspectRatio,
-            imageSize,
-          });
-          updateLastAssistantMessage(chatId, fallback);
-        } else if (backendReply && !accumulatedReply) {
-          updateLastAssistantMessage(chatId, backendReply);
-        }
-      } catch (error) {
-        console.error("Failed to send message:", error);
-        updateLastAssistantMessage(chatId, "Sorry, I encountered an error. Please try again.");
+        const assistantMessage: ChatMessage = {
+          id: createId("msg"),
+          role: "assistant",
+          content:
+            backendReply ??
+            buildFallbackReply({
+              prompt: trimmed,
+              modelId,
+              webSearchEnabled,
+              imageAspectRatio,
+              imageSize,
+            }),
+          createdAt: Date.now(),
+          modelId,
+        };
+
+        appendMessage(chatId, assistantMessage);
       } finally {
         setChatSendingById((previous) => ({ ...previous, [chatId]: false }));
       }
     },
-    [appendMessage, getChat, updateLastAssistantMessage],
+    [appendMessage, getChat],
   );
 
   const importChatFromUrl = useCallback(
