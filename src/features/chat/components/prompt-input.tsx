@@ -1,36 +1,34 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React from "react";
+import React, { useState } from "react";
 import {
-    Platform,
-    Pressable,
-    TextInput,
-    useColorScheme,
-    View
+  Platform,
+  Pressable,
+  TextInput,
+  useColorScheme,
+  View
 } from "react-native";
 
 interface PromptInputProps {
-  value: string;
-  onChangeValue: (value: string) => void;
-  onSend: () => void;
+  onSend: (content: string) => void;
   disabled?: boolean;
   placeholder?: string;
 }
 
 export const PromptInput = ({
-  value,
-  onChangeValue,
   onSend,
   disabled,
   placeholder = "Ask me anything...",
 }: PromptInputProps) => {
+  const [text, setText] = useState("");
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
   const handleSend = () => {
-    if (value.trim() && !disabled) {
+    if (text.trim() && !disabled) {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      onSend();
+      onSend(text.trim());
+      setText("");
     }
   };
 
@@ -45,13 +43,13 @@ export const PromptInput = ({
           multiline
           placeholder={placeholder}
           placeholderTextColor={isDark ? "#9ca3af" : "#6b7280"}
-          value={value}
-          onChangeText={onChangeValue}
+          value={text}
+          onChangeText={setText}
           editable={!disabled}
           style={{ paddingVertical: 8 }}
         />
 
-        {value.length > 0 && (
+        {text.length > 0 && (
           <Pressable
             onPress={handleSend}
             disabled={disabled}
@@ -62,7 +60,7 @@ export const PromptInput = ({
         )}
       </View>
 
-      {!value.length && (
+      {!text.length && (
         <View className="flex-row gap-1 mb-1">
           <Pressable
             className="p-2 rounded-full bg-muted border border-border/50"
