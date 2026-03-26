@@ -54,49 +54,23 @@ export async function requestCanvasGeneration(payload: {
   return postJson(endpoint, payload);
 }
 
-export async function requestAssistantReply(
-  payload: {
-    model: string;
-    webSearchEnabled: boolean;
-    imageAspectRatio: string;
-    imageSize: string | null;
-    messages: ChatMessage[];
-  },
-  onChunk?: (chunk: string) => void,
-): Promise<string | null> {
-  const url = toUrl(MOBILE_CHAT_PATH);
-  if (!url) return null;
+export async function requestAssistantReply(payload: {
+  model: string;
+  webSearchEnabled: boolean;
+  imageAspectRatio: string;
+  imageSize: string | null;
+  messages: ChatMessage[];
+}): Promise<string | null> {
+  const response = await postJson<{ reply?: string; message?: string }>(MOBILE_CHAT_PATH, payload as JsonObject);
+  if (!response) return null;
 
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) return null;
-
-    if (!onChunk || !response.body) {
-      const data = await response.json();
-      return data.reply || data.message || null;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let fullText = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      fullText += chunk;
-      onChunk(chunk);
-    }
-
-    return fullText;
-  } catch (error) {
-    console.error("Assistant reply error:", error);
-    return null;
+  if (typeof response.reply === "string" && response.reply.trim()) {
+    return response.reply;
   }
+
+  if (typeof response.message === "string" && response.message.trim()) {
+    return response.message;
+  }
+
+  return null;
 }
