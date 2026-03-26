@@ -5,10 +5,9 @@ type BabelApi = {
 module.exports = function (api: BabelApi) {
   api.cache(true);
   return {
-    presets: ["babel-preset-expo"],
-    plugins: [
+    presets: [
+      ["babel-preset-expo", { jsxImportSource: "nativewind" }],
       "nativewind/babel",
-      "react-native-reanimated/plugin",
     ],
   };
 };
